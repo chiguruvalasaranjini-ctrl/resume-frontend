@@ -9,7 +9,7 @@ function Register() {
 
   const handleRegister = async () => {
     try {
-      await axios.post('http://localhost:8080/api/auth/register', {
+      await axios.post('https://resume-analyzer-production-cbe6.up.railway.app/api/auth/register', {
         name, email, password
       });
       setMessage('Registration successful!');
@@ -35,16 +35,4 @@ function Register() {
           className="w-full px-4 py-3 border border-gray-300 rounded-lg mb-4 focus:outline-none focus:ring-2 focus:ring-indigo-400" />
         <input type="password" placeholder="Password" value={password}
           onChange={e => setPassword(e.target.value)}
-          className="w-full px-4 py-3 border border-gray-300 rounded-lg mb-6 focus:outline-none focus:ring-2 focus:ring-indigo-400" />
-        <button onClick={handleRegister}
-          className="w-full bg-indigo-600 text-white py-3 rounded-lg font-semibold hover:bg-indigo-700 transition duration-200">
-          Create Account
-        </button>
-        {message && <p className="text-green-500 text-center mt-4">{message}</p>}
-        <p className="text-center text-gray-500 mt-6">Already have an account? <a href="/" className="text-indigo-600 font-semibold hover:underline">Login</a></p>
-      </div>
-    </div>
-  );
-}
-
-export default Register;
+          className="w-full px-4 py-3 border

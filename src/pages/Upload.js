@@ -22,7 +22,7 @@ function Upload() {
     formData.append('userId', user.id || 1);
 
     try {
-      const response = await axios.post('http://localhost:8080/api/resume/upload', formData);
+      const response = await axios.post('https://resume-analyzer-production-cbe6.up.railway.app/api/resume/upload', formData);
       localStorage.setItem('analysis', response.data.analysis);
       window.location.href = '/results';
     } catch (error) {

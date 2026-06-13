@@ -8,7 +8,7 @@ function Login() {
 
   const handleLogin = async () => {
     try {
-      const response = await axios.post('http://localhost:8080/api/auth/login', {
+      const response = await axios.post('https://resume-analyzer-production-cbe6.up.railway.app/api/auth/login', {
         email, password
       });
       localStorage.setItem('user', JSON.stringify(response.data));
