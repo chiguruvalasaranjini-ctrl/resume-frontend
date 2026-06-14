@@ -35,4 +35,4 @@ function Register() {
           className="w-full px-4 py-3 border border-gray-300 rounded-lg mb-4 focus:outline-none focus:ring-2 focus:ring-indigo-400" />
         <input type="password" placeholder="Password" value={password}
           onChange={e => setPassword(e.target.value)}
-          className="w-full px-4 py-3 border
+          className="w-full px-4 py-3 border border-gray-300 rounded-lg mb-6 focus:outline-none focus:ring-2 focus:ring-indigo-400" />
