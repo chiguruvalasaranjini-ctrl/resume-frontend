@@ -8,55 +8,41 @@ function Results() {
     if (data) setAnalysis(data);
   }, []);
 
-  // Remove ** markdown and return clean text
-  const clean = (text) => text.replace(/\*\*/g, '').trim();
+  // Extract a field like "ATS_SCORE: 85" or multi-line "ATS_REASON: ..."
+  const extractField = (text, fieldName, nextFields) => {
+    const nextPattern = nextFields.map(f => `${f}:`).join('|');
+    const regex = new RegExp(
+      `${fieldName}:\\s*([\\s\\S]*?)(?=\\n(?:${nextPattern})|$)`,
+      'i'
+    );
+    const match = text.match(regex);
+    return match ? match[1].trim() : '';
+  };
 
-  // Split analysis into sections based on numbered headings like "1. ATS Score" or "**1. ATS Score**"
-  const parseSections = (text) => {
-    const lines = text.split('\n').map(l => l.trim()).filter(l => l);
-    const sections = [];
-    let current = null;
+  const fields = ['ATS_SCORE', 'ATS_REASON', 'SKILLS_FOUND', 'MISSING_SKILLS', 'JOB_RECOMMENDATIONS', 'IMPROVEMENT_SUGGESTIONS'];
 
-    lines.forEach(line => {
-      const headingMatch = line.match(/^\*{0,2}(\d+)\.\s*\*{0,2}(.+?)\*{0,2}:?\*{0,2}$/);
-      if (headingMatch && headingMatch[2].length < 60) {
-        current = { title: clean(headingMatch[2]), items: [] };
-        sections.push(current);
-      } else if (current) {
-        current.items.push(clean(line.replace(/^[-•]\s*/, '')));
-      } else {
-        // text before first heading
-        if (!sections.length) sections.push({ title: '', items: [] });
-        sections[0].items.push(clean(line.replace(/^[-•]\s*/, '')));
-      }
+  const getData = () => {
+    const result = {};
+    fields.forEach((field, i) => {
+      const next = fields.slice(i + 1);
+      result[field] = extractField(analysis, field, next);
     });
-
-    return sections;
+    return result;
   };
 
-  const sections = analysis ? parseSections(analysis) : [];
+  const data = analysis ? getData() : null;
+  const score = data && data.ATS_SCORE ? parseInt(data.ATS_SCORE.match(/\d+/)?.[0] || 0) : null;
 
-  // Try to extract ATS score number from text
-  let score = null;
-  const patterns = [
-  /out of 100\)?:?\s*(\d{1,3})/i,             // "out of 100): 72"
-  /(\d{1,3})\s*(?:\/|out of)\s*100/i,         // "72 out of 100" or "72/100"
-  /score[^\d]{0,20}(\d{1,3})/i                // fallback
-];
-for (const p of patterns) {
-  const m = analysis.match(p);
-  if (m) { score = parseInt(m[1]); break; }
-}
+  // split comma-separated or pipe-separated lists into array
+  const splitList = (str, sep) => str ? str.split(sep).map(s => s.trim()).filter(Boolean) : [];
 
-  const sectionStyles = (title) => {
-    const t = title.toLowerCase();
-    if (t.includes('ats') || t.includes('score')) return { color: 'text-purple-700', bg: 'bg-purple-50', border: 'border-purple-200', icon: '🎯' };
-    if (t.includes('skills found') || t.includes('strengths')) return { color: 'text-green-700', bg: 'bg-green-50', border: 'border-green-200', icon: '✅' };
-    if (t.includes('missing')) return { color: 'text-red-700', bg: 'bg-red-50', border: 'border-red-200', icon: '⚠️' };
-    if (t.includes('job') || t.includes('recommend')) return { color: 'text-blue-700', bg: 'bg-blue-50', border: 'border-blue-200', icon: '💼' };
-    if (t.includes('improve') || t.includes('suggestion')) return { color: 'text-orange-700', bg: 'bg-orange-50', border: 'border-orange-200', icon: '🚀' };
-    return { color: 'text-gray-700', bg: 'bg-gray-50', border: 'border-gray-200', icon: '📌' };
-  };
+  const skills = data ? splitList(data.SKILLS_FOUND, ',') : [];
+  const missing = data ? splitList(data.MISSING_SKILLS, ',') : [];
+  const jobs = data ? splitList(data.JOB_RECOMMENDATIONS, '|') : [];
+  const improvements = data ? splitList(data.IMPROVEMENT_SUGGESTIONS, '|') : [];
+
+  // fallback: if structured parsing found nothing useful, show raw text
+  const isStructured = data && (score !== null || skills.length || missing.length || jobs.length || improvements.length);
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 py-10 px-4">
@@ -70,9 +56,13 @@ for (const p of patterns) {
           <div className="bg-white rounded-2xl shadow-xl p-8 text-center">
             <p className="text-gray-500">No analysis found. Please upload your resume first.</p>
           </div>
+        ) : !isStructured ? (
+          <div className="bg-white rounded-2xl shadow-xl p-8 whitespace-pre-wrap text-gray-700 leading-relaxed">
+            {analysis}
+          </div>
         ) : (
           <>
-            {/* ATS Score Card */}
+            {/* ATS Score Gauge */}
             {score !== null && (
               <div className="bg-white rounded-2xl shadow-xl p-8 mb-6 text-center">
                 <h2 className="text-xl font-semibold text-gray-700 mb-4">🎯 ATS Compatibility Score</h2>
@@ -93,37 +83,69 @@ for (const p of patterns) {
                     <span className="text-sm text-gray-500">out of 100</span>
                   </div>
                 </div>
-                <p className="mt-4 text-gray-500">
-                  {score >= 70 ? 'Great! Your resume is ATS-friendly.' : score >= 40 ? 'Decent, but there is room for improvement.' : 'Needs work to pass ATS filters.'}
-                </p>
+                {data.ATS_REASON && (
+                  <p className="mt-4 text-gray-600 text-left leading-relaxed">{data.ATS_REASON}</p>
+                )}
               </div>
             )}
 
-            {/* Other Sections */}
-            {sections.map((section, idx) => {
-              if (!section.title && !section.items.length) return null;
-              if (section.title.toLowerCase().includes('ats') || section.title.toLowerCase().includes('score')) {
-                // skip duplicating ATS score section text, already shown above
-              }
-              const style = sectionStyles(section.title);
-              return (
-                <div key={idx} className={`rounded-2xl shadow-md p-6 mb-5 border ${style.border} ${style.bg}`}>
-                  {section.title && (
-                    <h3 className={`text-lg font-bold mb-3 ${style.color}`}>
-                      {style.icon} {section.title}
-                    </h3>
-                  )}
-                  <ul className="space-y-2">
-                    {section.items.map((item, i) => (
-                      <li key={i} className="text-gray-700 leading-relaxed pl-1">
-                        <span className={`font-semibold ${style.color}`}>• </span>
-                        {item}
-                      </li>
-                    ))}
-                  </ul>
+            {/* Skills Found */}
+            {skills.length > 0 && (
+              <div className="rounded-2xl shadow-md p-6 mb-5 border border-green-200 bg-green-50">
+                <h3 className="text-lg font-bold mb-3 text-green-700">✅ Skills Found</h3>
+                <div className="flex flex-wrap gap-2">
+                  {skills.map((s, i) => (
+                    <span key={i} className="bg-green-100 text-green-800 px-3 py-1 rounded-full text-sm font-medium">
+                      {s}
+                    </span>
+                  ))}
                 </div>
-              );
-            })}
+              </div>
+            )}
+
+            {/* Missing Skills */}
+            {missing.length > 0 && (
+              <div className="rounded-2xl shadow-md p-6 mb-5 border border-red-200 bg-red-50">
+                <h3 className="text-lg font-bold mb-3 text-red-700">⚠️ Missing Skills</h3>
+                <div className="flex flex-wrap gap-2">
+                  {missing.map((s, i) => (
+                    <span key={i} className="bg-red-100 text-red-800 px-3 py-1 rounded-full text-sm font-medium">
+                      {s}
+                    </span>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* Job Recommendations */}
+            {jobs.length > 0 && (
+              <div className="rounded-2xl shadow-md p-6 mb-5 border border-blue-200 bg-blue-50">
+                <h3 className="text-lg font-bold mb-3 text-blue-700">💼 Job Recommendations</h3>
+                <ul className="space-y-3">
+                  {jobs.map((job, i) => {
+                    const [title, ...rest] = job.split(':');
+                    return (
+                      <li key={i} className="text-gray-700 leading-relaxed">
+                        <span className="font-semibold text-blue-800">{title.trim()}</span>
+                        {rest.length > 0 && <>: {rest.join(':').trim()}</>}
+                      </li>
+                    );
+                  })}
+                </ul>
+              </div>
+            )}
+
+            {/* Improvement Suggestions */}
+            {improvements.length > 0 && (
+              <div className="rounded-2xl shadow-md p-6 mb-5 border border-orange-200 bg-orange-50">
+                <h3 className="text-lg font-bold mb-3 text-orange-700">🚀 Improvement Suggestions</h3>
+                <ul className="space-y-2 list-disc list-inside">
+                  {improvements.map((imp, i) => (
+                    <li key={i} className="text-gray-700 leading-relaxed">{imp}</li>
+                  ))}
+                </ul>
+              </div>
+            )}
           </>
         )}
 
