@@ -36,6 +36,7 @@ function Upload() {
       <div className="bg-white rounded-2xl shadow-xl p-8 w-full max-w-lg">
         <div className="text-center mb-8">
           <h1 className="text-3xl font-bold text-indigo-600">ResumeAI</h1>
+          <a href="/pricing" className="text-sm text-indigo-400 hover:underline">⭐ View Pricing Plans</a>
           <p className="text-gray-500 mt-2">Welcome, {user.name || 'User'}! 👋</p>
         </div>
         <h2 className="text-2xl font-semibold text-gray-700 mb-2">Upload Your Resume</h2>
